@@ -11,5 +11,12 @@
     "skipLibCheck": true,
     "types": ["node", "vite/client"]
   },
-  "include": ["vite.config.mts", "renderer/**/*.ts", "renderer/**/*.tsx"]
+  "include": [
+    "vite.config.mts",
+    "vitest.config.mts",
+    "renderer/**/*.ts",
+    "renderer/**/*.tsx",
+    "test/renderer/**/*.ts",
+    "test/renderer/**/*.tsx"
+  ]
 }

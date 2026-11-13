@@ -1,12 +1,8 @@
 # AGENTS.md
 
-Holepunch's template for Electron apps with **peer-to-peer OTA updates** (no update
-server). The original demo UI is deliberately minimal; this fork builds an Autopass
-workspace on top of its runtime and update plumbing. Stack: Electron ^42 + Forge
-^7.11 (CommonJS), `pear-runtime`
-(in-project worker originally from `hello-pear-worker`), React + TypeScript via
-Vite, CSS Modules, prettier + lunte.
-[README](README.md) = the human deployment manual (stage → provision → multisig).
+Autopass Desktop uses Pear Runtime, Electron, React, TypeScript, and CSS Modules.
+The renderer communicates with Autopass through Electron IPC and a Bare worker.
+[README](README.md) explains local setup, features, and checks.
 
 Key fact: **the OTA updater does not run in Electron.** `electron/main.js` only
 spawns a Bare sidecar (`workers/main.js`) and pipes bytes; the updater lives in the
@@ -18,23 +14,21 @@ npm only — pnpm breaks `forge.config.js` (undeclared hoisted `pear-link`).
 
 ```sh
 npm start                            # dev, updates OFF
-npm start -- --updates               # dev + update download (apply can't work in dev)
 npm start -- --storage <dir>         # second instance / custom storage
-npm run lint                         # prettier --check . && lunte  (= CI)
+npm run lint                         # prettier --check . && lunte
 npm run format                       # prettier --write . && lunte --fix
+npm run typecheck                    # app + Vitest TypeScript
+npm test                             # service + UI + OTA + build-security + bridge
 npm run package                      # → out/HelloPear-<platform>-<arch>/
+npm run test:worker                  # packaged production Bare worker
+npm run test:peers                   # paired Bare peers, private loopback DHT
+npm run test:desktop                 # packaged code + Electron UI smoke
 npm run make                         # → installers in out/make/
 ```
 
-`start`/`package`/`make` validate `package.json#upgrade` at the forge gate. This
-project contains a valid public key created with `pear touch`; a fresh template's
-placeholder must be replaced or overridden with `UPGRADE_KEY`. `UPGRADE_KEY` only
-helps the gate and _packaged_ builds (the hook rewrites the packaged
-`package.json`); in dev the running app reads the on-disk file. If that file holds
-an invalid placeholder, an environment override lets the window open but the
-worker still dies on the invalid link at boot (`--no-updates` doesn't prevent
-this — the updater parses the link in its constructor). A working dev run needs
-a well-formed key on disk.
+`start`/`package`/`make` validate `package.json#upgrade`. The worker also parses
+that link even with updates disabled. `UPGRADE_KEY` overrides the packaged value;
+development reads the value on disk.
 
 ## Contracts: editing one side breaks the other, often silently
 
@@ -46,7 +40,7 @@ a well-formed key on disk.
   entry (hypercore and hyperswarm ship the same map). Dev silently resolves a hoisted
   npm shim, the packaged app prunes it — the worker then dies at boot with
   `MODULE_NOT_FOUND` and the UI shows nothing but a dead backend
-- `productName` ↔ `AppxManifest.xml` Identity ↔ CI artifact names ↔ storage dirs
+- `productName` ↔ `AppxManifest.xml` Identity ↔ storage dirs
 - `AppxManifest.xml` Publisher CN ↔ Windows signing cert (stable across builds)
 - `pear.json#multisig`: **any edit = different production key**
 - `package.json#version` ↔ generated package metadata (AppImage/Snap/MSIX/Flatpak) ↔ release metadata (metainfo.xml <release>, Flatpak URLs + sha512)
@@ -69,8 +63,8 @@ rare.
 - ⚠️ **Ask first:** `pear.json`, `AppxManifest.xml` identity/publisher, new deps,
   electron bumps
 - 🚫 **Never:** deployment and publishing (`pear stage`,
-  `pear provision`, `pear multisig`, `pear seed`, pushing `v*` tags — that
-  triggers npm publish), unless the user explicitly asked for exactly that in
+  `pear provision`, `pear multisig`, `pear seed`, pushing `v*` tags), unless
+  the user explicitly asked for exactly that in
   this session
 - 🚫 **Never:** enable asar (breaks worker spawning); add CLI flags/launch surfaces
   without declaring them to paparam in `electron/main.js` (unknown argv crashes the
@@ -78,9 +72,8 @@ rare.
 
 ## Topic docs — match your task, read the doc BEFORE editing that area
 
-Each `agent_docs/` file holds only code-verified facts you cannot deduce from this
-repo's sources (cross-package contracts, failure semantics, dependency behavior);
-each opens with its own scope statement. Routing:
+The `agent_docs/` files describe current runtime behavior, build configuration,
+and cross-package contracts. Read the relevant topic before changing it:
 
 - Editing `electron/`, `renderer/`, `workers/`, or debugging worker spawn/IPC/startup
   → [`agent_docs/architecture.md`](agent_docs/architecture.md)
@@ -88,5 +81,3 @@ each opens with its own scope statement. Routing:
   updates → [`agent_docs/updates.md`](agent_docs/updates.md)
 - Touching `forge.config.js`, `build/`, `flatpak/`, rebranding, or signing
   → [`agent_docs/packaging.md`](agent_docs/packaging.md)
-- Touching `.github/`, or cutting/troubleshooting a release
-  → [`agent_docs/releases.md`](agent_docs/releases.md)

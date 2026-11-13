@@ -1,9 +1,18 @@
 const fs = require('fs')
 const path = require('path')
 const plink = require('pear-link')
+const validateDmgBackground = require('./build/dmg-background.cjs')
 
 const pkg = require('./package.json')
 const appName = pkg.productName ?? pkg.name
+
+const dmgConfig = {}
+if (process.platform === 'darwin') {
+  const installer = path.dirname(require.resolve('electron-installer-dmg'))
+  dmgConfig.background = validateDmgBackground(
+    path.join(installer, '..', 'resources', 'mac', 'background.png')
+  )
+}
 
 function getWindowsKitVersion() {
   const programFiles = process.env['PROGRAMFILES(X86)'] || process.env.PROGRAMFILES
@@ -26,6 +35,7 @@ function getWindowsKitVersion() {
 }
 
 let packagerConfig = {
+  asar: false,
   icon: 'build/icon',
   protocols: [{ name: appName, schemes: [pkg.name] }],
   derefSymlinks: true,
@@ -74,7 +84,7 @@ module.exports = {
     {
       name: '@electron-forge/maker-dmg',
       platforms: ['darwin'],
-      config: {}
+      config: dmgConfig
     },
     {
       name: '@electron-forge/maker-pkg',
@@ -170,7 +180,7 @@ module.exports = {
       const { build } = await import('vite')
       await build({ configFile: path.join(__dirname, 'vite.config.mts') })
     },
-    readPackageJson: async (forgeConfig, packageJson) => {
+    readPackageJson: (forgeConfig, packageJson) => {
       if (process.env.UPGRADE_KEY) {
         packageJson.upgrade = process.env.UPGRADE_KEY
       }
@@ -183,7 +193,7 @@ module.exports = {
 
       return packageJson
     },
-    preMake: async () => {
+    preMake: () => {
       fs.rmSync(path.join(__dirname, 'out', 'make'), { recursive: true, force: true })
 
       const manifest = path.join(__dirname, 'build', 'AppxManifest.xml')
@@ -191,7 +201,7 @@ module.exports = {
       const xml = fs.readFileSync(manifest, 'utf-8')
       fs.writeFileSync(manifest, xml.replace(/Version="[^"]*"/, `Version="${msixVersion}"`))
     },
-    postMake: async (forgeConfig, results) => {
+    postMake: (forgeConfig, results) => {
       for (const result of results) {
         if (result.platform !== 'win32') continue
         for (const artifact of result.artifacts) {

@@ -1,8 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-function toBuffer(data) {
+function toBytes(data) {
   if (data === null || data === undefined || typeof data === 'number') return data
-  return Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+  return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
 }
 
 contextBridge.exposeInMainWorld('bridge', {
@@ -13,17 +13,17 @@ contextBridge.exposeInMainWorld('bridge', {
   appAfterUpdate: () => ipcRenderer.invoke('app:afterUpdate'),
   startWorker: (specifier) => ipcRenderer.invoke('pear:startWorker', specifier),
   onWorkerStdout: (specifier, listener) => {
-    const wrap = (evt, data) => listener(toBuffer(data))
+    const wrap = (evt, data) => listener(toBytes(data))
     ipcRenderer.on('pear:worker:stdout:' + specifier, wrap)
     return () => ipcRenderer.removeListener('pear:worker:stdout:' + specifier, wrap)
   },
   onWorkerStderr: (specifier, listener) => {
-    const wrap = (evt, data) => listener(toBuffer(data))
+    const wrap = (evt, data) => listener(toBytes(data))
     ipcRenderer.on('pear:worker:stderr:' + specifier, wrap)
     return () => ipcRenderer.removeListener('pear:worker:stderr:' + specifier, wrap)
   },
   onWorkerIPC: (specifier, listener) => {
-    const wrap = (evt, data) => listener(toBuffer(data))
+    const wrap = (evt, data) => listener(toBytes(data))
     ipcRenderer.on('pear:worker:ipc:' + specifier, wrap)
     return () => ipcRenderer.removeListener('pear:worker:ipc:' + specifier, wrap)
   },

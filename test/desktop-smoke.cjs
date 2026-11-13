@@ -113,6 +113,14 @@ async function exercise(phase) {
   if (phase === 'create') {
     await waitFor(empty, 'initial empty list')
     check(countIs('0 entries'), 'Empty count')
+    let applyRejected = false
+    try {
+      await window.bridge.applyUpdate()
+    } catch (error) {
+      applyRejected = error.message.includes('supported installed app')
+    }
+    check(applyRejected, 'Development update apply must reject through the real preload bridge')
+    check(empty(), 'Rejected update must leave the workspace available')
     await submit(' ui-note ', 'first-fixture-value')
     await waitFor(
       () =>

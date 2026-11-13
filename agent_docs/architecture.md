@@ -1,74 +1,55 @@
-# Architecture notes (`electron/`, `renderer/`, `workers/`)
+# Desktop architecture
 
-> Read before editing `electron/`, `renderer/`, or `workers/`, or when debugging
-> worker spawn, IPC, or startup crashes. Only non-obvious, code-verified facts —
-> the code is the reference for everything else. Index: [AGENTS.md](../AGENTS.md).
+> Read before editing `electron/`, `renderer/`, or `workers/`, or debugging
+> startup and IPC. These notes describe the current app and its contracts.
+> Index: [AGENTS.md](../AGENTS.md).
 
-Renderer (sandboxed) ↔ `window.bridge` (Electron IPC) ↔ main (broker only) ↔ fd-3
-FramedStream pipe ↔ Bare worker (`hello-pear-worker`: swarm + corestore + updater).
-The code is small — read it for the wiring; below are only the non-obvious facts.
+React UI → `renderer/autopass.ts` → `window.bridge` → Electron main →
+FramedStream pipe → `workers/main.js` running in Bare.
 
-- On Windows, Vite's extensionless `./App` import can resolve the legacy `app.js`
-  before `App.tsx` because the filesystem is case-insensitive. The React entry
-  uses explicit `./App.tsx`; TypeScript enables `allowImportingTsExtensions`
-  alongside `noEmit` so the bundler and type checker select the same component.
-- The paparam parse at the top of `electron/main.js` throws on **any** unknown flag
-  or positional → packaged app crashes at startup. This also makes Win/Linux deep
-  links unreachable (a URL in argv kills the process before the single-instance
-  lock; only macOS `'open-url'` works).
-- The worker specifier `'/workers/main.js'` is the worker's **identity** — embedded
-  in every IPC channel name; must start with `/`; `pear:startWorker` resolves any
-  renderer-supplied specifier with **no allowlist**.
-- Six-arg spawn order (`getWorker()` → worker argv): `updates`, `version`,
-  `upgrade`, bundle name (`productName`+ext), storage dir, installed app path.
-  Cross-package contract with `hello-pear-worker` — wrong-but-parseable orders fail
-  silently. (Worker reads at offset +2 on desktop, 0 on mobile/BareKit; the package
-  is shared with `pear-mobile` hosts.)
-- The worker is a module for cross-platform reuse (desktop + mobile). For a
-  single-platform project, copy `hello-pear-worker/index.js` into
-  `workers/main.js` and develop it in-project (per that package's README).
-- Once the worker is in-project it resolves against **this** `package.json`, not the
-  package's — so Node builtins it uses need an `imports` entry (see AGENTS.md
-  contracts). A missing entry only fails in a packaged build.
-- Pipe protocol = UTF-8 strings in FramedStream frames. OTA controls retain their
-  raw strings; entry operations use JSON. Unrecognized requests are echoed as
-  `unknown-message ...`; worker output is forwarded to the renderer.
-- Autopass listing accepts JSON `{ "type": "entries:list", "requestId": "..." }`
-  and the legacy raw request string `entries:list`. The worker waits for Autopass
-  readiness, consumes its list stream, and replies with JSON:
-  `{ "type": "entries:list:result", "entries": [...] }` or
-  `{ "type": "entries:list:error", "error": "..." }`. String `requestId` values
-  are echoed in every operation's success and error replies; absent IDs are
-  omitted for compatibility. The renderer matches both ID and operation type.
-  Legacy logging records JSON message types, never entry payloads; React displays
-  entry names.
-- Entry creation accepts JSON `{ "type": "entries:add", "key": "...", "value": "..." }`
-  and replies with `{ "type": "entries:add:result", "key": "..." }` or
-  `{ "type": "entries:add:error", "error": "..." }`. Keys are trimmed and must be
-  nonempty; values must be strings. Autopass `add` can overwrite existing keys, so
-  the worker rejects existing names and reserves pending names before awaiting
-  readiness. This prevents overlapping local requests from both succeeding; it
-  does not enforce uniqueness across independent peers.
-- Removal accepts `{ "type": "entries:remove", "key": "...", "requestId": "..." }`
-  and replies with `entries:remove:result` (key) or `entries:remove:error` (error).
-  A missing entry is an idempotent removal. Autopass `update` events produce
-  `{ "type": "entries:changed" }`; the renderer subscribes before its first list,
-  coalesces notifications into one in-flight read plus a queued refresh, and
-  discards a snapshot if another change arrived while it was loading. Unmounting
-  aborts the read and removes subscriptions.
-- `pear:applyUpdate` is hardwired to `'/workers/main.js'`, lazily respawns a dead
-  worker, and its promise has no reject/timeout — any failure = renderer hangs.
-- `sendToAll` broadcasts every worker channel to **all** windows; nothing restarts
-  a crashed worker.
-- Per-platform storage dir is chosen in `getWorker()` (dev:
-  `<tmpdir>/pear/HelloPear`). Inside: `pear-runtime/corestore`,
-  `pear-runtime/next/<length>.<fork>/` (wiped on every updates-enabled launch),
-  `app-storage/` (suggested `pear.storage` for app data).
-- **A stall is usually the network, not the code, and the two look identical.** An
-  update that never arrives, or a peer that never connects, most often means this
-  machine is unreachable: `pear seed <link> --json` prints `firewalled` and
-  `natType`, and `natType: "Random"` is symmetric NAT, which defeats holepunching
-  (`upload.totalBytes` then stays 0 however long it runs). Before debugging app
-  logic, connect two bare Hyperswarm instances on a random topic with no app code —
-  if that fails, nothing above it can work. Exercise real replication against a
-  local `hyperdht/testnet` rather than the public DHT.
+- The sandboxed renderer handles presentation. The preload exposes specific IPC
+  methods; Electron main creates windows, starts workers, and forwards messages.
+- Autopass, its storage/networking, and the Pear updater run in the Bare worker.
+- Preload binary events use `Uint8Array` views that preserve byte offsets and
+  lengths. Electron 45's sandbox has no `Buffer` global; keep Node builtins out
+  of the preload rather than weakening sandboxing.
+
+## Worker and IPC contracts
+
+- The worker identity is `'/workers/main.js'`, including the leading `/`. The
+  renderer, main process, and IPC channel names must use the same specifier.
+  The broker accepts renderer-provided specifiers without an allowlist.
+- `getWorker()` passes six arguments in this order: `updates`, `version`,
+  `upgrade`, bundle name (`productName` plus extension), storage directory,
+  installed-app path. Desktop worker reads skip the executable and entry path.
+- Both pipe endpoints use FramedStream. Payloads are UTF-8 strings: entry
+  operations use JSON; OTA controls retain raw `updating`, `updated`,
+  `pear:applyUpdate`, `pear:updateApplied`, and `pear:updateFailed ...` messages.
+- Worker events are broadcast to all windows. Workers are cached by specifier;
+  a later start/apply request can create a replacement after an exit.
+
+## Entry requests and subscriptions
+
+- Operations are `entries:list`, `entries:add`, and `entries:remove`, with
+  `:result` or `:error` replies. String `requestId` values are echoed; the renderer
+  matches both ID and operation. The raw `entries:list` request remains accepted.
+- The worker waits for Autopass readiness, validates trimmed names/text values,
+  rejects duplicate local additions, and reserves names during pending adds.
+  This does not enforce duplicate-name protection across independent peers.
+- Autopass `update` events produce `entries:changed`. The renderer subscribes
+  before listing, coalesces concurrent refreshes, and discards superseded reads.
+  Unsubscribing aborts a pending read and removes listeners. Requests reject on
+  timeout or worker exit; JSON logging records message types, not entry values.
+
+## Build and storage details
+
+- On Windows, extensionless `./App` can resolve the legacy `app.js`. The React
+  entry imports `./App.tsx`; TypeScript enables `allowImportingTsExtensions` with
+  `noEmit`. Forge builds the renderer before start/package/make.
+- Bare resolves worker modules against this project's imports/dependencies.
+  Node builtins need Bare mappings, and packaged boot must be checked separately.
+- Paparam rejects unknown flags and positionals before startup; every supported
+  launch argument must be declared in `electron/main.js`.
+- The worker storage directory contains `pear-runtime/corestore` for updates and
+  `app-storage/autopass` for the separate Autopass Corestore.
+- [OTA behavior](updates.md) covers the apply cache, deadline, and platform gates.

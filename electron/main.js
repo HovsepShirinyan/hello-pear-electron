@@ -3,6 +3,7 @@ const os = require('os')
 const path = require('path')
 const PearRuntime = require('pear-runtime')
 const FramedStream = require('framed-stream')
+const createUpdateRequest = require('./update-request.cjs')
 
 const { isMac, isLinux, isWindows } = require('which-runtime')
 const { command, flag } = require('paparam')
@@ -67,8 +68,13 @@ function shouldUpdate() {
     return app.isPackaged
   }
 
-  // TODO: Linux Snap and Flatpak should not update.
-  return app.isPackaged
+  return (
+    app.isPackaged &&
+    !!process.env.APPIMAGE &&
+    !process.env.SNAP &&
+    !process.env.SNAP_USER_COMMON &&
+    !process.env.FLATPAK_ID
+  )
 }
 
 function getWorker(specifier) {
@@ -121,6 +127,7 @@ function getWorker(specifier) {
   })
   workers.set(specifier, pipe)
   pipe.on('data', sendWorkerIPC)
+  pipe.on('error', (error) => console.error('Worker IPC error:', error))
   worker.stdout.on('data', sendWorkerStdout)
   worker.stderr.on('data', sendWorkerStderr)
   worker.once('exit', (code) => {
@@ -160,22 +167,15 @@ async function createWindow() {
   await win.loadFile(path.join(__dirname, '..', 'dist', 'renderer', 'index.html'))
 }
 
+const requestUpdate = createUpdateRequest(() => getWorker(mainWorkerSpecifier))
+
 ipcMain.handle('pear:applyUpdate', () => {
-  const pipe = getWorker(mainWorkerSpecifier)
-
-  return new Promise((resolve, reject) => {
-    function onData(data) {
-      const message = data.toString()
-
-      if (message === 'pear:updateApplied') {
-        pipe.removeListener('data', onData)
-        resolve()
-      }
-    }
-
-    pipe.on('data', onData)
-    pipe.write('pear:applyUpdate')
-  })
+  if (!shouldUpdate()) {
+    throw new Error(
+      'Updates can only be applied from a supported installed app with updates enabled.'
+    )
+  }
+  return requestUpdate()
 })
 ipcMain.handle('pear:startWorker', (evt, filename) => {
   getWorker(filename)

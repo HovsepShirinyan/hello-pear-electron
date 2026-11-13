@@ -74,16 +74,19 @@ button:disabled {
 
 .runtime-bar {
   display: flex;
-  flex: 0 0 38px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  padding: 0 19px;
+  gap: 8px 12px;
+  min-height: 38px;
+  padding: 8px 19px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
 }
 
 .runtime-label {
+  flex: 0 0 auto;
   margin-right: auto;
   color: var(--muted);
   font-size: 10px;
@@ -93,13 +96,18 @@ button:disabled {
 }
 
 #v {
+  min-width: 0;
+  max-width: 100%;
   color: var(--muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 #update-btn {
   display: none;
+  flex: 0 0 auto;
   padding: 5px 10px;
   border: 1px solid #2c7661;
   border-radius: 8px;

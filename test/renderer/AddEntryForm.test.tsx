@@ -1,0 +1,70 @@
+import { describe, expect, it, vi } from 'vitest'
+import AddEntryForm from '../../renderer/AddEntryForm'
+import { deferred, element, input, interact, render, submit } from './dom'
+
+describe('AddEntryForm', () => {
+  it('requires a name and rejects whitespace before calling the service', async () => {
+    const onAdd = vi.fn<(key: string, value: string) => Promise<void>>()
+    await render(<AddEntryForm onAdd={onAdd} />)
+    const name = element<HTMLInputElement>('#entry-name')
+    expect(name.required).toBe(true)
+    expect(element<HTMLFormElement>('form').checkValidity()).toBe(false)
+    await input('#entry-name', '   ')
+    await submit()
+    expect(onAdd).not.toHaveBeenCalled()
+    expect(element('[role="alert"]').textContent.trim()).toBe('Entry name is required.')
+  })
+
+  it('trims names, preserves multiline values, blocks duplicate submissions, and clears a successful form', async () => {
+    const saving = deferred()
+    const onAdd = vi.fn<(key: string, value: string) => Promise<void>>(() => saving.promise)
+    await render(<AddEntryForm onAdd={onAdd} />)
+    await input('#entry-name', '  New note  ')
+    await input('#entry-value', 'first line\nsecond line')
+    await submit()
+    expect(onAdd).toHaveBeenCalledWith('New note', 'first line\nsecond line')
+    expect(element('form').getAttribute('aria-busy')).toBe('true')
+    expect(element<HTMLFieldSetElement>('fieldset').disabled).toBe(true)
+    expect(element('button[type="submit"]').textContent.trim()).toBe('Adding…')
+    await submit()
+    expect(onAdd).toHaveBeenCalledOnce()
+    await interact(() => saving.resolve(undefined))
+    expect(element('form').getAttribute('aria-busy')).toBe('false')
+    expect(element<HTMLFieldSetElement>('fieldset').disabled).toBe(false)
+    expect(element<HTMLInputElement>('#entry-name').value).toBe('')
+    expect(element<HTMLTextAreaElement>('#entry-value').value).toBe('')
+    expect(element('[role="status"]').textContent.trim()).toBe('Entry added.')
+  })
+
+  it('retains input after a failure and clears the error after a successful retry', async () => {
+    const onAdd = vi
+      .fn<(key: string, value: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('An entry with this name already exists.'))
+      .mockResolvedValueOnce(undefined)
+    await render(<AddEntryForm onAdd={onAdd} />)
+    await input('#entry-name', 'Existing note')
+    await input('#entry-value', 'test-only-value')
+    await submit()
+    expect(element('[role="alert"]').textContent).toContain('already exists')
+    expect(element<HTMLInputElement>('#entry-name').value).toBe('Existing note')
+    expect(element<HTMLTextAreaElement>('#entry-value').value).toBe('test-only-value')
+    expect(element<HTMLFieldSetElement>('fieldset').disabled).toBe(false)
+    expect(document.querySelector('[role="status"]')).toBeNull()
+    await input('#entry-name', 'Available note')
+    await submit()
+    expect(onAdd).toHaveBeenLastCalledWith('Available note', 'test-only-value')
+    expect(document.querySelector('[role="alert"]')).toBeNull()
+    expect(element('[role="status"]').textContent.trim()).toBe('Entry added.')
+  })
+
+  it('allows empty values and gives a useful message for non-Error rejections', async () => {
+    const onAdd = vi.fn<(key: string, value: string) => Promise<void>>().mockRejectedValue('failed')
+    await render(<AddEntryForm onAdd={onAdd} />)
+    await input('#entry-name', 'Empty note')
+    expect(element<HTMLFormElement>('form').checkValidity()).toBe(true)
+    await submit()
+    expect(onAdd).toHaveBeenCalledWith('Empty note', '')
+    expect(element('[role="alert"]').textContent.trim()).toBe('Could not add entry.')
+    expect(element<HTMLFieldSetElement>('fieldset').disabled).toBe(false)
+  })
+})

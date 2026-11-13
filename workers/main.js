@@ -68,6 +68,8 @@ goodbye(async () => {
   await autopassStore.close()
 })
 
+let applyingUpdate = false
+
 pipe.on('data', async (data) => {
   const message = data.toString()
 
@@ -155,12 +157,27 @@ pipe.on('data', async (data) => {
     return
   }
 
+  // Concurrent raw requests share the result of the current apply operation.
+  if (applyingUpdate) return
+  applyingUpdate = true
   try {
+    if (!updaterConfig.updates) throw new Error('Updates are disabled for this app session.')
+    if (!updaterConfig.app || updaterConfig.app === 'null' || updaterConfig.app === 'undefined') {
+      throw new Error('Updates cannot be applied outside an installed app.')
+    }
     await pear.ready()
+    if (pear.updater.applied) {
+      throw new Error('An update was already attempted. Restart the app before trying again.')
+    }
+    if (!pear.updater.bundled || !pear.updater.updated || !pear.updater.next) {
+      throw new Error('No downloaded update is ready to apply.')
+    }
     await pear.updater.applyUpdate()
     pipe.write('pear:updateApplied')
   } catch (err) {
     pipe.write('pear:updateFailed ' + err.message)
+  } finally {
+    applyingUpdate = false
   }
 })
 
