@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import styles from './AddEntryForm.module.css'
 
 type Props = {
   onAdd: (key: string, value: string) => Promise<void>
@@ -40,31 +41,87 @@ export default function AddEntryForm({ onAdd }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-busy={saving}>
-      <fieldset disabled={saving}>
-        <legend>Add an entry</legend>
+    <form className={styles.card} onSubmit={handleSubmit} aria-busy={saving}>
+      <fieldset className={styles.fields} disabled={saving}>
+        <legend className={styles.legend}>
+          <span className={styles.headingIcon} aria-hidden='true'>
+            <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.7'>
+              <path d='M12 5v14M5 12h14' strokeLinecap='round' />
+            </svg>
+          </span>
+          Add an entry
+        </legend>
 
-        <label htmlFor='entry-name'>Name</label>
-        <input
-          id='entry-name'
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-        />
+        <div className={styles.body}>
+          <div className={styles.field}>
+            <label htmlFor='entry-name'>Name</label>
+            <input
+              className={styles.control}
+              id='entry-name'
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+            />
+          </div>
 
-        <label htmlFor='entry-value'>Value</label>
-        <textarea
-          id='entry-value'
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          rows={4}
-        />
+          <div className={styles.field}>
+            <label htmlFor='entry-value'>Value</label>
+            <textarea
+              className={styles.control + ' ' + styles.textarea}
+              id='entry-value'
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              rows={4}
+            />
+          </div>
 
-        <button type='submit'>{saving ? 'Adding…' : 'Add entry'}</button>
+          <div className={styles.actions}>
+            <button className={styles.primaryButton} type='submit'>
+              <svg
+                aria-hidden='true'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='1.8'
+              >
+                <path d='M12 5v14M5 12h14' strokeLinecap='round' />
+              </svg>
+              {saving ? 'Adding…' : 'Add entry'}
+            </button>
+          </div>
+        </div>
       </fieldset>
 
-      {error && <p role='alert'>{error}</p>}
-      {success && <p role='status'>Entry added.</p>}
+      {error && (
+        <p className={styles.message + ' ' + styles.error} role='alert'>
+          <svg
+            aria-hidden='true'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='1.7'
+          >
+            <circle cx='12' cy='12' r='8.5' />
+            <path d='M12 7.5v5M12 16h.01' strokeLinecap='round' />
+          </svg>
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className={styles.message + ' ' + styles.success} role='status'>
+          <svg
+            aria-hidden='true'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='1.7'
+          >
+            <circle cx='12' cy='12' r='8.5' />
+            <path d='m8 12 2.5 2.5L16 9' strokeLinecap='round' strokeLinejoin='round' />
+          </svg>
+          Entry added.
+        </p>
+      )}
     </form>
   )
 }

@@ -236,6 +236,74 @@ async function exercise(phase) {
   }
 }
 
+async function inspectAppearance(narrow) {
+  const check = (condition, label) => {
+    if (!condition) throw new Error(label)
+  }
+  for (let attempt = 0; window.innerWidth <= 720 !== narrow; attempt++) {
+    if (attempt > 100) throw new Error('Viewport resize timed out')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  check(window.getComputedStyle(document.body).colorScheme.includes('dark'), 'Dark color scheme')
+  check(
+    window.getComputedStyle(document.body).backgroundColor === 'rgb(13, 15, 23)',
+    'Dark application background'
+  )
+  const color = (value) => (value.match(/[\d.]+/g) || []).map(Number)
+  for (const node of document.querySelectorAll('#entry-search, #entry-name, #entry-value')) {
+    let background = node
+    let fill = color(window.getComputedStyle(background).backgroundColor)
+    while (node.id === 'entry-search' && fill[3] === 0 && background.parentElement) {
+      background = background.parentElement
+      fill = color(window.getComputedStyle(background).backgroundColor)
+    }
+    check(fill.length >= 3 && Math.max(...fill.slice(0, 3)) < 80, 'Inputs need a dark fill')
+    check(fill.length < 4 || fill[3] === 1, 'Input backgrounds must resolve to an opaque fill')
+  }
+  const selected = document.querySelector('[data-entry-key="persisted-note"]')
+  selected.click()
+  for (let attempt = 0; selected.getAttribute('aria-pressed') !== 'true'; attempt++) {
+    if (attempt > 100) throw new Error('Selected entry state timed out')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  for (let attempt = 0; ; attempt++) {
+    const [red, green, blue] = color(window.getComputedStyle(selected).backgroundColor)
+    if (red > green && blue > green + 5) break
+    if (attempt > 100) throw new Error('Selected entry needs a purple fill')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  check(
+    document.querySelector('#entry-detail-value')?.textContent === 'Value hidden.',
+    'Preview must keep the selected value hidden'
+  )
+  const viewport = document.documentElement
+  check(viewport.scrollWidth <= viewport.clientWidth + 1, 'Layout overflows horizontally')
+  for (const node of document.querySelectorAll(
+    '#entry-search, #entry-details, #root form, #entry-name, #entry-value, #root form button[type="submit"]'
+  )) {
+    node.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })
+    const rect = node.getBoundingClientRect()
+    check(rect.width > 0 && rect.height > 0, 'Required controls must be visible')
+    check(rect.left >= -1 && rect.right <= viewport.clientWidth + 1, 'Control clipped horizontally')
+    const visibleTop = Math.max(0, rect.top)
+    const visibleBottom = Math.min(viewport.clientHeight, rect.bottom)
+    check(visibleBottom > visibleTop, 'Control cannot be reached by scrolling')
+    const target = document.elementFromPoint(
+      Math.min(viewport.clientWidth - 1, Math.max(0, rect.left + rect.width / 2)),
+      (visibleTop + visibleBottom) / 2
+    )
+    check(target && (target === node || node.contains(target)), 'Control obscured or clipped')
+  }
+  await Promise.allSettled(
+    document
+      .getAnimations()
+      .filter((animation) => Number.isFinite(animation.effect?.getComputedTiming().endTime))
+      .map((animation) => animation.finished)
+  )
+  for (const node of document.querySelectorAll('*')) node.scrollTop = 0
+  window.scrollTo(0, 0)
+}
+
 function runElectron() {
   const { app } = require('electron')
   // Tests must not replace the user's OS protocol handler.
@@ -278,14 +346,46 @@ function runElectron() {
   process.on('uncaughtException', finish)
   process.on('unhandledRejection', finish)
   app.on('browser-window-created', (event, win) => {
+    win.webContents.setBackgroundThrottling(false)
     win.hide()
+    win.setSize(1200, 800)
     win.webContents.once('did-fail-load', () => finish(new Error('Renderer failed to load')))
     win.webContents.once('render-process-gone', () => finish(new Error('Renderer process stopped')))
     win.webContents.once('did-finish-load', async () => {
       try {
+        console.log(`DESKTOP_SMOKE_STEP:${phase}:functional`)
         await win.webContents.executeJavaScript(
           `(${exercise.toString()})(${JSON.stringify(phase)})`
         )
+        console.log(`DESKTOP_SMOKE_STEP:${phase}:functional-complete`)
+        if (phase === 'create') {
+          for (const [label, width, height] of [
+            ['wide', 1200, 800],
+            ['narrow', 540, 840]
+          ]) {
+            console.log(`DESKTOP_SMOKE_STEP:${phase}:appearance-${label}`)
+            win.setSize(width, height)
+            await win.webContents.executeJavaScript(
+              `(${inspectAppearance.toString()})(${width <= 720})`
+            )
+            let timer
+            try {
+              const preview = await Promise.race([
+                win.webContents.capturePage(undefined, { stayHidden: true }),
+                new Promise((resolve, reject) => {
+                  timer = setTimeout(() => reject(new Error('Preview capture timed out')), 5000)
+                })
+              ])
+              if (preview.isEmpty()) throw new Error('Preview capture was empty')
+              fs.writeFileSync(
+                path.join(root, 'out', `style-preview-${label}.png`),
+                preview.toPNG()
+              )
+            } finally {
+              clearTimeout(timer)
+            }
+          }
+        }
         finish()
       } catch (error) {
         finish(error)
@@ -350,7 +450,7 @@ async function runParent() {
           reject(new Error('Stored entry values appeared in application console output.'))
         } else {
           console.log(
-            `PASS: desktop ${phase === 'create' ? 'CRUD, search, masked details, and live refresh' : 'restart persistence'}`
+            `PASS: desktop ${phase === 'create' ? 'CRUD, search, masked details, live refresh, and responsive dark styles' : 'restart persistence'}`
           )
           resolve()
         }

@@ -1,0 +1,183 @@
+.card {
+  min-width: 0;
+  margin: 0;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: 100%;
+  margin-bottom: 24px;
+  padding: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.headingIcon {
+  display: inline-flex;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #20d6e913;
+  color: var(--cyan);
+}
+
+.headingIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.body {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.field {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.field label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.control {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  caret-color: var(--cyan);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--subtle);
+}
+
+.control:focus-visible {
+  border-color: var(--cyan);
+}
+
+.control:disabled {
+  opacity: 0.6;
+}
+
+.textarea {
+  min-height: 116px;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1px;
+}
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 43px;
+  max-width: 100%;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: var(--cyan);
+  color: #0d1820;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    opacity 140ms ease;
+}
+
+.primaryButton svg {
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cyan) 82%, white);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 11px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.message svg {
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+}
+
+.success {
+  border-color: #5cfdba25;
+  background: #5cfdba09;
+  color: var(--mint);
+}
+
+.error {
+  border-color: #ff8f9e25;
+  background: #ff8f9e0b;
+  color: var(--danger);
+}
+
+@media (max-width: 520px) {
+  .card {
+    padding: 24px;
+  }
+}

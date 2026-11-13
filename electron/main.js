@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron')
 const os = require('os')
 const path = require('path')
 const PearRuntime = require('pear-runtime')
@@ -15,6 +15,8 @@ const mainWorkerSpecifier = '/workers/main.js'
 const workers = new Map()
 
 const appName = productName ?? name
+
+nativeTheme.themeSource = 'dark'
 
 const cmd = command(
   appName,
@@ -136,8 +138,9 @@ function getWorker(specifier) {
 
 async function createWindow() {
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1120,
+    height: 800,
+    backgroundColor: '#0d0f17',
     webPreferences: {
       preload: path.join(__dirname, '..', 'electron', 'preload.js'),
       sandbox: true,

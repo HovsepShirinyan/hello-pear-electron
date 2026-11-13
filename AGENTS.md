@@ -1,10 +1,11 @@
 # AGENTS.md
 
 Holepunch's template for Electron apps with **peer-to-peer OTA updates** (no update
-server). The demo UI is trivial on purpose: the plumbing is the product and forks build
-their app on top of it. Stack: Electron ^42 + Forge ^7.11 (CommonJS), `pear-runtime`
+server). The original demo UI is deliberately minimal; this fork builds an Autopass
+workspace on top of its runtime and update plumbing. Stack: Electron ^42 + Forge
+^7.11 (CommonJS), `pear-runtime`
 (in-project worker originally from `hello-pear-worker`), React + TypeScript via
-Vite, prettier + lunte.
+Vite, CSS Modules, prettier + lunte.
 [README](README.md) = the human deployment manual (stage → provision → multisig).
 
 Key fact: **the OTA updater does not run in Electron.** `electron/main.js` only

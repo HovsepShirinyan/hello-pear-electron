@@ -1,0 +1,141 @@
+:root {
+  --bg: #0d0f17;
+  --panel: #1b1e2a;
+  --raised: #242733;
+  --field: #242733;
+  --border: #303445;
+  --text: #f4f6fb;
+  --muted: #a5afc3;
+  --subtle: #8691a8;
+  --cyan: #20d6e9;
+  --mint: #5cfdba;
+  --purple: #7660e9;
+  --danger: #ff8f9e;
+  --shadow: 0 12px 38px #00000030;
+  color-scheme: dark;
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  font-synthesis: none;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid var(--bg);
+  border-radius: 8px;
+  background: #41485c;
+}
+
+.desktop-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.runtime-bar {
+  display: flex;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 19px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.runtime-label {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+#v {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+#update-btn {
+  display: none;
+  padding: 5px 10px;
+  border: 1px solid #2c7661;
+  border-radius: 8px;
+  background: #173c31;
+  color: var(--mint);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#root {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  body {
+    overflow: auto;
+  }
+
+  .desktop-frame {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  #root {
+    flex: auto;
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

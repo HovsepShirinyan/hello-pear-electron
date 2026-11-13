@@ -1,0 +1,204 @@
+.card {
+  min-width: 0;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.headingIcon {
+  display: inline-flex;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #7660e91a;
+  color: #a69afa;
+}
+
+.headingIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.closeButton svg {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+}
+
+.closeButton:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.details {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+  margin: 26px 0 0;
+}
+
+.detail {
+  min-width: 0;
+}
+
+.detail dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.name {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 550;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.valueBox {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 88px;
+  margin: 10px 0 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--field);
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.placeholder svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--subtle);
+}
+
+.value,
+.emptyValue {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  color: var(--text);
+  font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.emptyValue {
+  color: var(--muted);
+  font-family: inherit;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.revealButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.revealButton svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--cyan);
+}
+
+.revealButton:hover {
+  border-color: #20d6e959;
+  background: color-mix(in srgb, var(--raised) 88%, var(--cyan));
+}
+
+@media (max-width: 520px) {
+  .card {
+    padding: 24px;
+  }
+}

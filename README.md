@@ -21,9 +21,12 @@ Selecting an entry opens its current details; values are hidden until explicitly
 revealed. Switching entries or closing the details panel hides the value again,
 and live removal clears the selection.
 
-Work remaining: visual design with CSS Modules, Vitest UI coverage, verification
-with paired peers, dependency security advisory remediation, and sharing the Pear
-application. Only use dummy data while developing. The template's OTA apply
+The dark desktop interface uses CSS Modules, with a searchable sidebar, rounded
+controls, visible keyboard focus, and a stacked layout for narrower windows.
+
+Work remaining: Vitest UI coverage, verification with paired peers, dependency
+security advisory remediation, and sharing the Pear application. Only use dummy
+data while developing. The template's OTA apply
 failure path still needs attention: the worker reports failure, but Electron's
 waiting promise does not yet reject.
 
@@ -40,7 +43,9 @@ npm run test:desktop
 
 The retained service tests use Node's built-in test/assert tools and a mocked
 bridge. The worker and desktop smoke checks use the packaged application code
-with isolated dummy storage under `out/`.
+with isolated dummy storage under `out/`. The desktop check also verifies wide
+and narrow layouts and writes `out/style-preview-wide.png` and
+`out/style-preview-narrow.png` with dummy data and the selected value hidden.
 
 ## Table of Contents
 
