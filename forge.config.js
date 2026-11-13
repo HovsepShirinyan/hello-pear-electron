@@ -166,6 +166,10 @@ module.exports = {
   ],
 
   hooks: {
+    generateAssets: async () => {
+      const { build } = await import('vite')
+      await build({ configFile: path.join(__dirname, 'vite.config.mts') })
+    },
     readPackageJson: async (forgeConfig, packageJson) => {
       if (process.env.UPGRADE_KEY) {
         packageJson.upgrade = process.env.UPGRADE_KEY

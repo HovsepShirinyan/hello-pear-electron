@@ -26,14 +26,32 @@ The code is small — read it for the wiring; below are only the non-obvious fac
 - Once the worker is in-project it resolves against **this** `package.json`, not the
   package's — so Node builtins it uses need an `imports` entry (see AGENTS.md
   contracts). A missing entry only fails in a packaged build.
-- Pipe protocol = plain UTF-8 strings in FramedStream frames, matched by exact
-  equality. Unknown →worker strings get `console.log`ged; unknown worker→ strings
-  are forwarded to the renderer.
-- Autopass listing uses the raw request string `entries:list`. The worker waits
-  for Autopass readiness, consumes its list stream, and replies with JSON:
+- Pipe protocol = UTF-8 strings in FramedStream frames. OTA controls retain their
+  raw strings; entry operations use JSON. Unrecognized requests are echoed as
+  `unknown-message ...`; worker output is forwarded to the renderer.
+- Autopass listing accepts JSON `{ "type": "entries:list", "requestId": "..." }`
+  and the legacy raw request string `entries:list`. The worker waits for Autopass
+  readiness, consumes its list stream, and replies with JSON:
   `{ "type": "entries:list:result", "entries": [...] }` or
-  `{ "type": "entries:list:error", "error": "..." }`. OTA requests and replies
-  retain their existing raw strings; the renderer currently logs listing replies.
+  `{ "type": "entries:list:error", "error": "..." }`. String `requestId` values
+  are echoed in every operation's success and error replies; absent IDs are
+  omitted for compatibility. The renderer matches both ID and operation type.
+  Legacy logging records JSON message types, never entry payloads; React displays
+  entry names.
+- Entry creation accepts JSON `{ "type": "entries:add", "key": "...", "value": "..." }`
+  and replies with `{ "type": "entries:add:result", "key": "..." }` or
+  `{ "type": "entries:add:error", "error": "..." }`. Keys are trimmed and must be
+  nonempty; values must be strings. Autopass `add` can overwrite existing keys, so
+  the worker rejects existing names and reserves pending names before awaiting
+  readiness. This prevents overlapping local requests from both succeeding; it
+  does not enforce uniqueness across independent peers.
+- Removal accepts `{ "type": "entries:remove", "key": "...", "requestId": "..." }`
+  and replies with `entries:remove:result` (key) or `entries:remove:error` (error).
+  A missing entry is an idempotent removal. Autopass `update` events produce
+  `{ "type": "entries:changed" }`; the renderer subscribes before its first list,
+  coalesces notifications into one in-flight read plus a queued refresh, and
+  discards a snapshot if another change arrived while it was loading. Unmounting
+  aborts the read and removes subscriptions.
 - `pear:applyUpdate` is hardwired to `'/workers/main.js'`, lazily respawns a dead
   worker, and its promise has no reject/timeout — any failure = renderer hangs.
 - `sendToAll` broadcasts every worker channel to **all** windows; nothing restarts

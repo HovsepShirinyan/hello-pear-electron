@@ -23,9 +23,10 @@ Apply:
   read-only install mount) — those update via their stores; an attempted apply
   throws in the worker and the renderer hangs.
 - One-shot latch: `applied = true` is set **before** the swap → a failed apply
-  can't be retried in-process; the worker handler has no try/catch and the main
-  promise no reject/timeout → every failure mode is a silent hang. Real update UX
-  needs a try/catch + failure reply in the worker.
+  can't be retried in-process. The worker catches failures and sends
+  `pear:updateFailed ...`, but the main promise consumes only `pear:updateApplied`
+  and has no timeout/rejection path, so the failure can still leave the renderer
+  waiting indefinitely.
 - Dev (`--updates`): download path only — apply would target a file named `'null'`.
 
 Seeding / replication:
@@ -36,6 +37,9 @@ Seeding / replication:
   When adding app P2P storage, hoist `swarm.on('connection', (c) =>
 store.replicate(c))` out of the updates-gated block and `swarm.join` your app
   topic separately — only the updater-drive join stays gated behind `updates`.
+- The restriction above concerns the updater's store/swarm. Autopass has a
+  separate Corestore and manages its own replication; its `entries:changed`
+  notifications are independent of the OTA updates flag.
 
 Surface the template doesn't use (see the `pear-runtime` / `pear-runtime-updater`
 READMEs): updater opts `delay` (rollout cap; `0` = instant, good for tests),

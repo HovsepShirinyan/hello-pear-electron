@@ -31,6 +31,10 @@ const pear = new PearRuntime({ ...updaterConfig, swarm, store })
 const autopassStore = new Corestore(path.join(pear.storage, 'autopass'))
 
 const pass = new Autopass(autopassStore)
+pass.on('update', () => {
+  pipe.write(JSON.stringify({ type: 'entries:changed' }))
+})
+const pendingEntryAdds = new Set()
 
 pass.ready().then(
   () => pipe.write('autopass-ready'),
@@ -67,14 +71,81 @@ goodbye(async () => {
 pipe.on('data', async (data) => {
   const message = data.toString()
 
-  if (message === 'entries:list') {
+  let request
+
+  try {
+    request = JSON.parse(message)
+  } catch {
+    request = null
+  }
+
+  const requestId = typeof request?.requestId === 'string' ? request.requestId : undefined
+
+  if (request?.type === 'entries:add') {
+    let pendingKey = null
+    try {
+      if (typeof request.key !== 'string' || !request.key.trim()) {
+        throw new Error('Entry name is required.')
+      }
+
+      if (typeof request.value !== 'string') {
+        throw new Error('Entry value must be text.')
+      }
+
+      const key = request.key.trim()
+
+      if (pendingEntryAdds.has(key)) {
+        throw new Error('An entry with this name is being added.')
+      }
+
+      pendingEntryAdds.add(key)
+      pendingKey = key
+
+      await pass.ready()
+
+      if ((await pass.get(key)) !== null) {
+        throw new Error('An entry with this name already exists.')
+      }
+
+      await pass.add(key, request.value)
+
+      pipe.write(JSON.stringify({ type: 'entries:add:result', key, requestId }))
+    } catch (err) {
+      pipe.write(JSON.stringify({ type: 'entries:add:error', error: err.message, requestId }))
+    } finally {
+      if (pendingKey !== null) pendingEntryAdds.delete(pendingKey)
+    }
+
+    return
+  }
+
+  if (request?.type === 'entries:remove') {
+    try {
+      if (typeof request.key !== 'string' || !request.key.trim()) {
+        throw new Error('Entry name is required.')
+      }
+
+      const key = request.key.trim()
+
+      await pass.ready()
+      await pass.remove(key)
+
+      pipe.write(JSON.stringify({ type: 'entries:remove:result', key, requestId }))
+    } catch (err) {
+      pipe.write(JSON.stringify({ type: 'entries:remove:error', error: err.message, requestId }))
+    }
+
+    return
+  }
+
+  if (message === 'entries:list' || request?.type === 'entries:list') {
     try {
       await pass.ready()
       const entries = []
       for await (const entry of pass.list()) entries.push(entry)
-      pipe.write(JSON.stringify({ type: 'entries:list:result', entries }))
+      pipe.write(JSON.stringify({ type: 'entries:list:result', entries, requestId }))
     } catch (err) {
-      pipe.write(JSON.stringify({ type: 'entries:list:error', error: err.message }))
+      pipe.write(JSON.stringify({ type: 'entries:list:error', error: err.message, requestId }))
     }
     return
   }

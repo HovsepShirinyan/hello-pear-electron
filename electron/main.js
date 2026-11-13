@@ -154,7 +154,7 @@ async function createWindow() {
     return
   }
 
-  await win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'))
+  await win.loadFile(path.join(__dirname, '..', 'dist', 'renderer', 'index.html'))
 }
 
 ipcMain.handle('pear:applyUpdate', () => {

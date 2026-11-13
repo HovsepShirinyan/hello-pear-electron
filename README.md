@@ -9,6 +9,34 @@ End-to-end boilerplate for embedding [pear-runtime][pear-runtime] into [Electron
 - Application storage management
 - Staged deployment pipeline with multisig production releases
 
+## Assessment checkpoint
+
+The React + TypeScript renderer lists, adds, and removes Autopass entries through
+the Electron preload bridge and Bare worker. Autopass change events refresh the
+list automatically. Requests have correlation IDs, duplicate local additions are
+rejected, and loading, success, and error feedback are included.
+
+Work remaining: visual design with CSS Modules, Vitest UI coverage, verification
+with paired peers, dependency security advisory remediation, and sharing the Pear
+application. Only use dummy data while developing. The template's OTA apply
+failure path still needs attention: the worker reports failure, but Electron's
+waiting promise does not yet reject.
+
+Local checks:
+
+```sh
+npm run lint
+npm run typecheck
+npm run test:service
+npm run package
+npm run test:worker
+npm run test:desktop
+```
+
+The retained service tests use Node's built-in test/assert tools and a mocked
+bridge. The worker and desktop smoke checks use the packaged application code
+with isolated dummy storage under `out/`.
+
 ## Table of Contents
 
 - [Related Repositories](#related-repositories)
@@ -78,9 +106,17 @@ npm run install:mac
 
 ### Start <a name="start"></a>
 
-Start app in development mode:
+Start the app in development mode (Forge builds the React renderer first):
 
 ```sh
+npm start
+```
+
+Electron loads the generated `dist/renderer/index.html`. For hot reload on Windows,
+run `npm run dev:renderer` in one terminal. In a second PowerShell terminal run:
+
+```powershell
+$env:PEAR_DEV_SERVER_URL = 'http://127.0.0.1:5173'
 npm start
 ```
 

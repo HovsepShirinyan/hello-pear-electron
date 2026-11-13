@@ -6,6 +6,10 @@
 
 - **asar must stay off**: workers are spawned by an external Bare binary from real
   file paths; asar breaks every spawn.
+- Forge's `generateAssets` hook builds the Vite renderer into `dist/renderer` for
+  start/package/make, including direct Forge invocations. Electron loads that
+  generated HTML unless `PEAR_DEV_SERVER_URL` selects a development server. Loading
+  the source `renderer/index.html` directly cannot execute its TSX entry point.
 - The `readPackageJson` hook validates the upgrade key and runs for `start` too
   (hence fresh-clone failures); `UPGRADE_KEY` overrides the field at package time.
 - `preMake` rewrites the `AppxManifest.xml` Version **in place** (dirties git;

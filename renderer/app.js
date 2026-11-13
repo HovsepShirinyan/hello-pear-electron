@@ -45,7 +45,14 @@ const offWorkerStderr = bridge.onWorkerStderr(workers.main, (data) => {
 
 const offWorkerIpc = bridge.onWorkerIPC(workers.main, (data) => {
   const message = decoder.decode(data)
-  console.log('worker ipc', '[', workers.main, ']:', message)
+  let label
+  try {
+    const parsed = JSON.parse(message)
+    label = typeof parsed?.type === 'string' ? parsed.type : 'JSON message'
+  } catch {
+    label = message.startsWith('unknown-message ') ? 'unknown-message' : message
+  }
+  console.log('worker ipc', '[', workers.main, ']:', label)
   onWorkerUpdaterEvent(message)
 
   if (!sentHello) {

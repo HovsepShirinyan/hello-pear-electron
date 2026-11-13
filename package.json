@@ -26,7 +26,10 @@
     "install:fs-xattr": "cd node_modules/fs-xattr && node-gyp rebuild",
     "dev:renderer": "vite",
     "build:renderer": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:service": "node --test test/renderer-service.test.cjs",
+    "test:worker": "node test/worker-smoke.cjs",
+    "test:desktop": "node test/desktop-smoke.cjs"
   },
   "dependencies": {
     "autopass": "^3.4.1",
