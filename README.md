@@ -16,6 +16,11 @@ the Electron preload bridge and Bare worker. Autopass change events refresh the
 list automatically. Requests have correlation IDs, duplicate local additions are
 rejected, and loading, success, and error feedback are included.
 
+Entry names can be searched case-insensitively, with matching and total counts.
+Selecting an entry opens its current details; values are hidden until explicitly
+revealed. Switching entries or closing the details panel hides the value again,
+and live removal clears the selection.
+
 Work remaining: visual design with CSS Modules, Vitest UI coverage, verification
 with paired peers, dependency security advisory remediation, and sharing the Pear
 application. Only use dummy data while developing. The template's OTA apply
