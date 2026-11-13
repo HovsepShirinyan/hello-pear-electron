@@ -29,6 +29,11 @@ The code is small — read it for the wiring; below are only the non-obvious fac
 - Pipe protocol = plain UTF-8 strings in FramedStream frames, matched by exact
   equality. Unknown →worker strings get `console.log`ged; unknown worker→ strings
   are forwarded to the renderer.
+- Autopass listing uses the raw request string `entries:list`. The worker waits
+  for Autopass readiness, consumes its list stream, and replies with JSON:
+  `{ "type": "entries:list:result", "entries": [...] }` or
+  `{ "type": "entries:list:error", "error": "..." }`. OTA requests and replies
+  retain their existing raw strings; the renderer currently logs listing replies.
 - `pear:applyUpdate` is hardwired to `'/workers/main.js'`, lazily respawns a dead
   worker, and its promise has no reject/timeout — any failure = renderer hangs.
 - `sendToAll` broadcasts every worker channel to **all** windows; nothing restarts

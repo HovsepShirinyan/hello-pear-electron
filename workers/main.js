@@ -8,6 +8,7 @@ const FramedStream = require('framed-stream')
 const path = require('bare-path')
 const dir = require('bare-storage')
 const { isBareKit } = require('which-runtime')
+const Autopass = require('autopass')
 
 // mobile doesn't have the executable path (argv[0])
 // and the worker entry path (argv[1]) in the workers argv‘s
@@ -27,7 +28,14 @@ const pipe = new FramedStream(Bare.IPC)
 const store = new Corestore(path.join(updaterConfig.dir, 'pear-runtime', 'corestore'))
 const swarm = new Hyperswarm()
 const pear = new PearRuntime({ ...updaterConfig, swarm, store })
+const autopassStore = new Corestore(path.join(pear.storage, 'autopass'))
 
+const pass = new Autopass(autopassStore)
+
+pass.ready().then(
+  () => pipe.write('autopass-ready'),
+  (err) => pipe.write('autopass-error ' + err.message)
+)
 pear.updater.on('error', (err) => pipe.write('updater-error ' + err.message))
 
 if (updaterConfig.updates !== false) {
@@ -52,10 +60,25 @@ goodbye(async () => {
   await swarm.destroy()
   await pear.close()
   await store.close()
+  await pass.close()
+  await autopassStore.close()
 })
 
 pipe.on('data', async (data) => {
   const message = data.toString()
+
+  if (message === 'entries:list') {
+    try {
+      await pass.ready()
+      const entries = []
+      for await (const entry of pass.list()) entries.push(entry)
+      pipe.write(JSON.stringify({ type: 'entries:list:result', entries }))
+    } catch (err) {
+      pipe.write(JSON.stringify({ type: 'entries:list:error', error: err.message }))
+    }
+    return
+  }
+
   if (message !== 'pear:applyUpdate') {
     pipe.write('unknown-message ' + message)
     return
